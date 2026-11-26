@@ -1,0 +1,15 @@
+
+{
+  "id": "./",
+  "name": "TaxiBook DZ",
+  "short_name": "TaxiBook",
+  "description": "تطبيق حجز الرحلات والتنقل بين الولايات الجزائرية",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#111827",
+  "lang": "ar",
+  "dir": "rtl"
+}
