@@ -189,5 +189,14 @@ async function vStats(){const a=await sb.rpc('admin_daily',{p_days:30}),s=await 
 sb.auth.onAuthStateChange((ev)=>{if(ev==='SIGNED_OUT')boot()});
 boot();
 </script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js")
+      .then(() => console.log("TaxiBook DZ ready"))
+      .catch((error) => console.error("SW error:", error));
+  });
+}
+</script>
 </body>
 </html>
