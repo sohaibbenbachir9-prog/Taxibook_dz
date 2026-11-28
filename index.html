@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E5A3A">
+<title>taxibook dz</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F6F5EF;--card:#fff;--ink:#14201B;--mute:#67726C;--line:#E2E0D4;--g:#0E5A3A;--gt:#fff;--y:#F4B400;--yt:#1b1500;--ok:#17803d;--bad:#b42318}
+@media (prefers-color-scheme:dark){:root{--bg:#0E1411;--card:#17211C;--ink:#ECF1EE;--mute:#9AA7A0;--line:#2A3831;--g:#3DBE86;--gt:#06180f;--ok:#4cd07f;--bad:#ff8a7a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Cairo',Tahoma,Arial,sans-serif;line-height:1.6;padding-top:env(safe-area-inset-top,0)}
+.app{max-width:480px;margin:0 auto;padding:0 16px 110px}
+header{display:flex;justify-content:space-between;align-items:center;padding:14px 0 6px}
+.brand{font-weight:800;font-size:22px}.brand b{background:var(--y);color:var(--yt);padding:0 8px;border-radius:6px;margin-inline-start:6px;font-size:15px}
+h2{font-size:21px;margin:10px 0 4px}h3{font-size:17px;margin:18px 0 6px}
+.sub,.note{color:var(--mute);font-size:13px;margin:0 0 12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+label{display:block;font-size:13px;color:var(--mute);margin:8px 0 3px}
+input,select{width:100%;font:inherit;font-size:16px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+:focus-visible{outline:3px solid var(--y);outline-offset:2px}
+.btn{width:100%;border:0;border-radius:12px;padding:13px;font:inherit;font-weight:800;font-size:16px;background:var(--y);color:var(--yt);cursor:pointer;margin-top:10px}
+.btn.ghost{background:none;border:1px solid var(--line);color:var(--ink);font-weight:600}
+.btn.sm{width:auto;padding:7px 14px;font-size:14px;margin:6px 6px 0 0}
+.btn:disabled{opacity:.5}
+a.btn{display:inline-block;text-decoration:none;text-align:center}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:4px 0}
+.tag{display:inline-block;padding:1px 10px;border-radius:999px;font-size:12px;font-weight:600;background:var(--line)}
+.tag.ok{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
+.tag.bad{background:color-mix(in srgb,var(--bad) 18%,transparent);color:var(--bad)}
+.price{font-weight:800;color:var(--g)}
+input[type=radio]{width:auto;margin-inline-end:8px}details summary{cursor:pointer;font-weight:600}
+.err{color:var(--bad);font-size:13px;min-height:18px}
+.trip{cursor:pointer}.time{font-size:22px;font-weight:800}
+.step{display:flex;align-items:center;gap:14px}
+.step button{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:20px}
+.qr{display:grid;place-items:center;background:#fff;border-radius:12px;padding:12px;margin:10px auto;width:fit-content}
+.code{font-weight:800;letter-spacing:1px;direction:ltr;text-align:center;font-size:18px}
+.res{border-radius:12px;padding:12px;font-weight:600;margin-top:10px}
+.res.ok{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
+.res.bad{background:color-mix(in srgb,var(--bad) 16%,transparent);color:var(--bad)}
+nav{position:fixed;inset:auto 0 0 0;background:var(--card);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom,0)}
+nav button{flex:1;max-width:120px;border:0;background:none;color:var(--mute);font:inherit;font-size:12px;padding:8px 2px;cursor:pointer}
+nav button span{display:block;font-size:20px}nav button.on{color:var(--g);font-weight:800}
+#toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;z-index:9;display:none;max-width:90%}
+</style>
+</head>
+<body>
+<div class="app"><header><div class="brand">taxibook<b>dz</b> <small style="font-size:11px;color:var(--mute);font-weight:600">v8</small></div><span class="tag" id="who"></span></header><main id="v"></main></div>
+<nav id="nav"></nav><div id="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+const sb=supabase.createClient('https://coxfvgybxdatlmgrpdpr.supabase.co','sb_publishable_y4x1o0QH64FaddlSh8nM0w_7IL1gGbA');
+const $=s=>document.querySelector(s),esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const WIL=['الجزائر','وهران','قسنطينة','عنابة','سطيف','البليدة','المدية','تيبازة','بومرداس','تيزي وزو','بجاية','البويرة','الجلفة','الشلف','تلمسان','سيدي بلعباس','غليزان','معسكر','مستغانم','باتنة','بسكرة','ورقلة','غرداية','الأغواط','تيارت','جيجل','سكيكدة','عين الدفلى','برج بوعريريج','المسيلة'];
+const EM={'banned':'حسابك موقوف. تواصل مع الإدارة.','invalid or expired code':'الرمز غير صحيح أو منتهي.','vehicle too small':'مركبتك لا تتسع لركاب هذه الرحلة.','same driver':'هذه رحلتك أصلاً.','nothing due':'لا مستحقات جاهزة.','no requests':'لم تعد هذه الطلبات متاحة (قبلها سائق آخر).','invalid time':'اختر موعداً في المستقبل.','invalid route':'حدّد وجهة صحيحة.','driver not approved':'حساب السائق غير معتمد بعد.','seats exceed vehicle capacity':'عدد المقاعد يتجاوز مقاعد مركبتك.','not enough seats':'لا توجد مقاعد كافية.','trip unavailable':'الرحلة غير متاحة.','invalid drop-off':'محطة النزول غير صحيحة.','invalid ccp':'رقم CCP غير صحيح.','forbidden':'غير مسموح لك بهذا الإجراء.','not your trip':'هذه التذكرة ليست لرحلتك.','Invalid login':'الهاتف أو كلمة السر غير صحيحة.','already registered':'هذا الرقم مسجّل من قبل.','Email not confirmed':'يجب إيقاف تأكيد البريد في إعدادات Supabase.'};
+const toast=m=>{const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(toast.i);toast.i=setTimeout(()=>t.style.display='none',3500)};
+const err=e=>{const m=(e&&e.message)||String(e);const k=Object.keys(EM).find(k=>m.includes(k));toast(k?EM[k]:m)};
+const fmt=d=>new Date(d).toLocaleString('fr-FR',{timeZone:'Africa/Algiers',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+const V=h=>{$('#v').innerHTML=h;scrollTo(0,0)};
+const tomorrow=()=>new Date(Date.now()+864e5).toISOString().slice(0,10);
+const wl='<datalist id="w">'+WIL.map(w=>`<option value="${w}">`).join('')+'</datalist>';
+let U=null,P=null,DRV=null,tab='';
+const TABS={passenger:[['s','بحث','🔍'],['b','حجوزاتي','🎫'],['n','إشعارات','🔔'],['a','حسابي','👤']],driver:[['t','رحلاتي','🚕'],['k','مسح','✅'],['n','إشعارات','🔔'],['a','حسابي','👤']],admin:[['d','السائقون','🪪'],['c','الشكاوى','📨'],['m','المستحقات','💰'],['x','أرقام','📊'],['n','إشعارات','🔔'],['a','حسابي','👤']]};
+const HOME={passenger:'s',driver:'t',admin:'d'};
+const VIEWS={s:vSearch,b:vBook,n:vNotif,a:vAcct,t:vTrips,k:vScan,d:vDrivers,x:vStats,c:vCases,m:vDues};
+const busy=async(b,f)=>{b.disabled=true;try{await f()}catch(e){err(e)}b.disabled=false};
+
+/* ---------- الدخول ---------- */
+const mail=p=>p.replace(/\D/g,'')+'@taxibook.dz';
+function authView(mode){mode=mode||'login';const reg=mode==='reg';
+  V(`<h2>${reg?'إنشاء حساب':'تسجيل الدخول'}</h2><p class="sub">أهلاً بك في taxibook dz</p><div class="card">${reg?'<label>الاسم الكامل</label><input id="n" autocomplete="name">':''}<label>رقم الهاتف</label><input id="p" inputmode="tel" dir="ltr" placeholder="0550123456"><label>كلمة السر (6 أحرف على الأقل)</label><input id="w2" type="password"><div class="err" id="e"></div><button class="btn" id="go">${reg?'إنشاء الحساب':'دخول'}</button></div><button class="btn ghost" id="sw">${reg?'لدي حساب':'إنشاء حساب جديد'}</button>`);
+  $('#sw').onclick=()=>authView(reg?'login':'reg');
+  $('#go').onclick=e=>busy(e.target,async()=>{const ph=$('#p').value.replace(/\s/g,''),pw=$('#w2').value,E=$('#e');
+    if(!/^0[567]\d{8}$/.test(ph))return E.textContent='رقم الهاتف غير صحيح (مثال: 0550123456).';
+    if(pw.length<6)return E.textContent='كلمة السر قصيرة.';
+    if(reg){const n=$('#n').value.trim();if(n.length<3)return E.textContent='أدخل اسمك الكامل.';
+      const {data,error}=await sb.auth.signUp({email:mail(ph),password:pw,options:{data:{full_name:n,phone:ph}}});
+      if(error)return err(error);if(!data.session)return E.textContent='تم إنشاء الحساب لكن تأكيد البريد مفعّل في Supabase. أوقفه ثم سجّل الدخول.'}
+    else{const {error}=await sb.auth.signInWithPassword({email:mail(ph),password:pw});if(error)return err(error)}
+    await boot()})}
+async function load(){const a=await sb.from('profiles').select('*').eq('id',U.id).maybeSingle(),b=await sb.from('drivers').select('*').eq('id',U.id).maybeSingle();P=a.data;DRV=b.data}
+async function boot(){const {data}=await sb.auth.getSession();U=data.session&&data.session.user;
+  if(!U){P=null;$('#nav').innerHTML='';$('#who').textContent='';return authView()}
+  await load();if(!P){V('<h2>تعذّر تحميل الحساب</h2><p class="sub">تأكد من تشغيل ملف التحديث في Supabase ثم سجّل الخروج وأعد المحاولة.</p><button class="btn ghost" id="lo">تسجيل الخروج</button>');$('#lo').onclick=out;return}
+  if(P.is_banned){await sb.auth.signOut();U=null;P=null;authView();return toast('حسابك موقوف. تواصل مع الإدارة.')}
+  if(!(TABS[P.role]||[]).some(x=>x[0]===tab))tab=HOME[P.role];
+  $('#who').textContent=P.full_name;nav();show()}
+const out=async()=>{await sb.auth.signOut();tab='';boot()};
+function nav(){$('#nav').innerHTML=TABS[P.role].map(x=>`<button data-t="${x[0]}" class="${tab===x[0]?'on':''}"><span>${x[2]}</span>${x[1]}</button>`).join('');
+  $('#nav').querySelectorAll('button').forEach(b=>b.onclick=async()=>{tab=b.dataset.t;if(tab==='a'){await load();}nav();show()})}
+function show(){(VIEWS[tab]||vSearch)()}
+
+/* ---------- الراكب ---------- */
+function vSearch(){V(`<h2>إلى أين تسافر؟</h2><p class="sub">ابحث عن رحلة. وإن لم تجد، اطلب رحلة وسيصل طلبك للسائقين المتاحين.</p>${wl}<div class="card"><label>من</label><input id="f" list="w" value="الجزائر"><label>إلى (وجهة أو محطة في الطريق)</label><input id="t" list="w" placeholder="المدية"><label>التاريخ</label><input id="d" type="date" value="${tomorrow()}"><button class="btn" id="go">ابحث عن رحلة</button></div><div id="r"></div><h3>طلباتي</h3><div id="mq"><p class="sub">جاري التحميل…</p></div>`);
+  $('#go').onclick=e=>busy(e.target,async()=>{const f=$('#f').value.trim(),t=$('#t').value.trim(),d=$('#d').value;if(!t)return toast('اكتب الوجهة.');
+    const {data,error}=await sb.rpc('search_trips',{p_from:f,p_to:t,p_date:d});if(error)return err(error);
+    $('#r').innerHTML=(data.length?data.map((x,i)=>`<div class="card trip" data-i="${i}"><div class="row"><span class="time">${fmt(x.departs_at).split(' ')[1]}</span><span class="price">${x.price} دج</span></div><b>${esc(x.driver.name)}</b> <span class="note">${esc(x.driver.car)} ${esc(x.driver.color||'')} · ⭐ ${x.driver.rating||'—'}</span><div class="note">💺 ${x.seats_left} متبقية${x.stops.length?' · تمر بـ '+x.stops.map(esc).join('، '):''}</div></div>`).join(''):'<p class="sub">لا توجد رحلات لهذا المسار والتاريخ بعد.</p>')+`<div class="card"><b>${data.length?'لا يناسبك موعد؟':'اطلب رحلة'}</b><p class="note">يصل طلبك للسائقين المتاحين، وعند قبول أحدهم تصير الرحلة رسمية وتدفع لتثبيت مقعدك.<br>يرى السائقون اسمك الأول فقط، ولا يظهر رقم هاتفك للسائق إلا بعد أن تحجز مقعداً معه.</p><label>عدد المقاعد</label><input id="rs" type="number" min="1" max="8" value="1"><button class="btn" id="rq">اطلب رحلة إلى ${esc(t)}</button></div>`;
+    $('#r').querySelectorAll('.trip').forEach(c=>c.onclick=()=>vTrip(data[c.dataset.i]));
+    $('#rq').onclick=ev=>busy(ev.target,async()=>{const r=await sb.rpc('create_ride_request',{p_from:f,p_to:t,p_date:d,p_seats:+$('#rs').value||1});if(r.error)return err(r.error);
+      toast(r.data.existing?'لديك طلب مماثل بانتظار سائق.':'تم إرسال طلبك. عدد السائقين المتاحين الذين أُشعروا: '+r.data.drivers);mine()})});
+  async function mine(){const {data,error}=await sb.from('ride_requests').select('*').eq('passenger_id',U.id).order('created_at',{ascending:false}).limit(10);if(error)return err(error);
+    const SN={open:'بانتظار سائق',matched:'قبل سائق: ادفع لتثبيت مقعدك',cancelled:'ملغى'};
+    $('#mq').innerHTML=data.length?data.map((r,i)=>`<div class="card"><div class="row"><b>${esc(r.from_wilaya)} ← ${esc(r.to_place)}</b><span class="tag ${r.status==='matched'?'ok':''}">${SN[r.status]}</span></div><div class="note">${r.travel_date} · ${r.seats} مقعد</div>${r.status==='matched'?`<button class="btn sm" data-m="${i}">احجز وادفع</button>`:''}${r.status==='open'?`<button class="btn ghost sm" data-c="${i}">إلغاء الطلب</button>`:''}</div>`).join(''):'<p class="sub">لا توجد طلبات.</p>';
+    $('#mq').querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>busy(b,async()=>{const r=await sb.rpc('get_trip',{p_trip:data[b.dataset.m].trip_id});if(r.error)return err(r.error);if(!r.data)return toast('الرحلة لم تعد متاحة.');vTrip(r.data)}));
+    $('#mq').querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>busy(b,async()=>{const {error}=await sb.from('ride_requests').update({status:'cancelled'}).eq('id',data[b.dataset.c].id);if(error)return err(error);mine()}))}
+  mine()}
+function vTrip(t){let n=1;const opts=t.stops.concat([t.to]);
+  V(`<h2>${esc(t.from)} ← ${esc(t.to)}</h2><p class="sub">${fmt(t.departs_at)} · ${esc(t.driver.name)} · نقطة التجمع: ${esc(t.meeting_point||'يحددها السائق')}</p><div class="card"><label>محطة النزول (السعر ثابت)</label><select id="dp">${opts.map(o=>`<option>${esc(o)}</option>`).join('')}</select><label>عدد المقاعد</label><div class="step"><button id="m">−</button><b id="c">1</b><button id="p">+</button></div><div class="row"><b>المجموع</b><b class="price" id="tot"></b></div></div><button class="btn" id="nx">التالي: الدفع</button><button class="btn ghost" id="bk">رجوع</button>`);
+  const u=()=>{$('#c').textContent=n;$('#tot').textContent=n*t.price+' دج'};u();$('#bk').onclick=vSearch;
+  $('#m').onclick=()=>{if(n>1){n--;u()}};$('#p').onclick=()=>{if(n<t.seats_left){n++;u()}};
+  $('#nx').onclick=()=>vPay(t,n,$('#dp').value)}
+function vPay(t,n,drop){const tot=n*t.price;
+  V(`<h2>الدفع</h2><div class="card"><div class="row"><span>${esc(t.from)} ← ${esc(t.to)}</span><span>${fmt(t.departs_at)}</span></div><div class="row"><span>النزول في</span><b>${esc(drop)}</b></div><div class="row"><span>${n} مقعد × ${t.price} دج</span><b class="price">${tot} دج</b></div></div><h3>طريقة الدفع</h3><label class="card"><input type="radio" name="pm" checked> الذهبية (بريد الجزائر)</label><label class="card"><input type="radio" name="pm"> بطاقة CIB</label><div class="card"><label>رقم البطاقة</label><input id="cn" inputmode="numeric" dir="ltr" placeholder="0000 0000 0000 0000"><p class="note">وضع تجريبي: لا يُسحب أي مال ولا تُحفظ بيانات البطاقة. في النسخة الحقيقية تُحوَّل إلى صفحة الدفع الرسمية.</p></div><div class="err" id="e"></div><button class="btn" id="pay">ادفع ${tot} دج</button><button class="btn ghost" id="bk">رجوع</button>`);
+  $('#bk').onclick=()=>vTrip(t);
+  $('#pay').onclick=e=>busy(e.target,async()=>{if($('#cn').value.replace(/\D/g,'').length<12)return $('#e').textContent='أدخل رقم بطاقة (للتجربة: أي 16 رقماً).';
+    const s=await sb.rpc('start_checkout',{p_trip:t.id,p_seats:n,p_drop:drop});if(s.error)return err(s.error);
+    const r=await sb.rpc('dev_confirm_payment',{p_session:s.data.id});if(r.error)return err(r.error);
+    if(r.data.result==='confirmed')vTicket(r.data.ticket,true);else{V('<h2>امتلأت الرحلة</h2><p class="sub">سيُسترجع مبلغك. اختر رحلة أخرى.</p><button class="btn" id="b2">رجوع للبحث</button>');$('#b2').onclick=vSearch}})}
+function vTicket(code,fresh){V(`<h2>${fresh?'تم الحجز ✓':'تذكرتك'}</h2><p class="sub">أظهر الرمز للسائق عند الصعود.</p><div class="card"><div class="qr" id="q"></div><div class="code">${esc(code)}</div></div><button class="btn ghost" id="bk">رجوع</button>`);
+  try{new QRCode($('#q'),{text:code,width:180,height:180})}catch(e){}$('#bk').onclick=()=>{tab='b';nav();vBook()}}
+async function vBook(){V('<h2>حجوزاتي</h2><p class="sub">جاري التحميل…</p>');
+  const {data,error}=await sb.from('bookings').select('id,trip_id,ticket_code,seats,drop_off,status,total_price,trips(from_wilaya,to_wilaya,departs_at),reviews(rating)').order('created_at',{ascending:false});if(error)return err(error);
+  const ST={paid:'مدفوعة',used:'مستعملة',refund_due:'استرجاع قيد المعالجة',refunded:'مُسترجعة'};
+  V('<h2>حجوزاتي</h2>'+SOS+(data.length?data.map((b,i)=>`<div class="card"><div class="row"><b>${esc(b.trips.from_wilaya)} ← ${esc(b.trips.to_wilaya)}</b><span class="tag ${b.status==='paid'?'ok':''}">${ST[b.status]}</span></div><div class="note">${fmt(b.trips.departs_at)} · نزول: ${esc(b.drop_off)} · ${b.seats} مقعد · ${b.total_price} دج</div><button class="btn sm" data-i="${i}">عرض التذكرة</button><button class="btn ghost sm" data-call="${b.trip_id}">📞 اتصال بالسائق</button><button class="btn ghost sm" data-share="${b.trip_id}" data-info="${esc(b.trips.from_wilaya+' ← '+b.trips.to_wilaya+' · '+fmt(b.trips.departs_at))}">↗ مشاركة الرحلة</button><button class="btn ghost sm" data-rc="${i}">🧾 إيصال</button>${b.status==='used'?((Array.isArray(b.reviews)?b.reviews[0]:b.reviews)?'<div class="note">تقييمك: '+'★'.repeat((Array.isArray(b.reviews)?b.reviews[0]:b.reviews).rating)+'</div>':`<div class="row"><select id="rt${i}" style="width:70px"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select><button class="btn sm" data-r="${i}">قيّم السائق</button></div>`):''}</div>`).join(''):'<p class="sub">لا توجد حجوزات بعد.</p>'));
+  document.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>vTicket(data[b.dataset.i].ticket_code));
+  document.querySelectorAll('[data-rc]').forEach(b=>b.onclick=()=>vReceipt(data[b.dataset.rc]));
+  document.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>busy(b,async()=>{const i=b.dataset.r,{error}=await sb.rpc('rate_booking',{p_booking:data[i].id,p_rating:+$('#rt'+i).value,p_note:null});if(error)return err(error);toast('شكراً لتقييمك');vBook()}))}
+async function vNotif(){const {data,error}=await sb.from('notifications').select('*').order('created_at',{ascending:false}).limit(30);if(error)return err(error);
+  V('<h2>الإشعارات</h2>'+(data.length?data.map(n=>`<div class="card"><b>${esc(n.title)}</b><div class="note">${esc(n.body||'')} · ${fmt(n.created_at)}</div></div>`).join(''):'<p class="sub">لا توجد إشعارات.</p>'));
+  const un=data.filter(n=>!n.is_read).map(n=>n.id);if(un.length)sb.from('notifications').update({is_read:true}).in('id',un)}
+
+/* ---------- الحساب + طلب السائق ---------- */
+function vAcct(){const roleN={passenger:'راكب',driver:'سائق',admin:'مدير'}[P.role];
+  let h=`<h2>حسابي</h2><div class="card"><div class="row"><span>الاسم</span><b>${esc(P.full_name)}</b></div><div class="row"><span>الهاتف</span><b dir="ltr">${esc(P.phone||'')}</b></div><div class="row"><span>الدور</span><span class="tag ok">${roleN}</span></div></div>`;
+  const F=[['i','رقم الهوية'],['l','رقم رخصة السياقة'],['m','نوع وطراز المركبة'],['c','اللون'],['r','رقم التسجيل'],['s','عدد المقاعد (1-8)'],['k','رقم حساب CCP لاستلام المستحقات']];
+  if(P.role==='passenger'){
+    if(DRV&&DRV.status==='pending')h+='<div class="card"><span class="tag">طلب السائق قيد المراجعة</span><p class="note">ستصلك رسالة عند قرار الإدارة، ثم اضغط «تحديث».</p></div>';
+    else{if(DRV&&DRV.status==='rejected')h+=`<div class="res bad">رُفض طلبك: ${esc(DRV.reject_reason||'وثائق غير كاملة')}. عدّل بياناتك وأرسل من جديد.</div>`;
+      h+=`<h3>التسجيل كسائق</h3><div class="card">${F.map(f=>`<label>${f[1]}</label><input id="a${f[0]}">`).join('')}<label>صورة الهوية</label><input type="file" id="fid" accept="image/*"><label>صورة رخصة السياقة</label><input type="file" id="fl" accept="image/*"><label>صورة بطاقة المركبة</label><input type="file" id="fc" accept="image/*"><p class="note">رقم CCP والوثائق يراها المدير فقط.</p><div class="err" id="e"></div><button class="btn" id="ap">إرسال الطلب للإدارة</button></div>`}}
+  V(h+EXTRA()+CASEFORM+HELP+'<button class="btn ghost" id="rf">تحديث</button><button class="btn ghost" id="lo">تسجيل الخروج</button>');
+  $('#lo').onclick=out;$('#rf').onclick=()=>boot();acctExtras();
+  $('#cs').onclick=e=>busy(e.target,async()=>{const o=$('#cc').selectedOptions[0];const {error}=await sb.from('cases').insert({author_id:U.id,kind:o.dataset.k,category:o.textContent,body:$('#cb').value.trim()||null});if(error)return err(error);$('#cb').value='';toast('تم إرسالها للإدارة')});
+  if($('#ap'))$('#ap').onclick=e=>busy(e.target,async()=>{const v=k=>$('#a'+k).value.trim(),s=+v('s');
+    if(!v('i')||!v('l')||!v('m')||!v('r'))return $('#e').textContent='أكمل بيانات الهوية والرخصة والمركبة.';
+    if(!(s>=1&&s<=8))return $('#e').textContent='عدد المقاعد بين 1 و8.';
+    const docs={};for(const [k,id] of [['id','fid'],['license','fl'],['car','fc']]){const f=$('#'+id).files[0];if(!f)return $('#e').textContent='ارفع صور الوثائق الثلاث.';const path=U.id+'/'+k+'-'+Date.now()+'.jpg';const up=await sb.storage.from('driver-docs').upload(path,f,{upsert:true,contentType:f.type||'image/jpeg'});if(up.error)return err(up.error);docs[k]=path}
+    const {error}=await sb.rpc('apply_as_driver',{p_id_number:v('i'),p_license:v('l'),p_model:v('m'),p_color:v('c'),p_plate:v('r'),p_seats:s,p_docs:docs,p_ccp:v('k')});
+    if(error)return err(error);toast('تم إرسال طلبك للإدارة');await load();vAcct()})}
+
+/* ---------- السائق ---------- */
+async function vTrips(){const a=await sb.from('trips').select('*,trip_stops(name,seq)').eq('driver_id',U.id).order('departs_at',{ascending:false}).limit(20),r=await sb.rpc('driver_open_requests');if(a.error)return err(a.error);
+  const data=a.data,reqs=r.data||[],av=!!(DRV&&DRV.is_available);
+  const SN={open:'مفتوحة',full:'مكتملة',departed:'انطلقت',completed:'انتهت',cancelled:'ملغاة'};
+  V(`<h2>لوحة السائق</h2>${wl}<div class="card" id="ern"><div class="note">جاري تحميل الأرباح…</div></div><div class="card"><div class="row"><div><b>متاح لاستقبال الطلبات</b><div class="note">فعّلها ليصلك إشعار عند وجود من يبحث عن رحلة.</div></div><button class="btn sm" id="av">${av?'🟢 متاح · إيقاف':'⚪ غير متاح · تفعيل'}</button></div></div><div id="acc"></div><h3>أشخاص يبحثون عن رحلة</h3>${reqs.length?reqs.map((g,i)=>`<div class="card"><div class="row"><b>${esc(g.from)} ← ${esc(g.to)}</b><span class="tag">${g.people} أشخاص · ${g.seats} مقعد</span></div><div class="note">بتاريخ ${esc(g.date)}</div>${(g.passengers||[]).map(p=>`<div class="note">👤 ${esc(p.name)} · ${p.seats} مقعد</div>`).join('')}<div class="note">يظهر لك رقم الراكب عند حجزه مقعداً معك.</div><button class="btn sm" data-g="${i}">قبول الرحلة</button></div>`).join(''):'<p class="sub">لا توجد طلبات الآن. فعّل «متاح» وستصلك إشعارات عند وصول طلب جديد.</p>'}<h3>رحلاتي</h3>${data.map(t=>`<div class="card"><div class="row"><b>${esc(t.from_wilaya)} ← ${esc(t.to_wilaya)}</b><span class="tag ${t.status==='open'?'ok':''}">${SN[t.status]}</span></div><div class="note">${fmt(t.departs_at)} · ${t.seats_total-t.seats_left}/${t.seats_total} محجوزة · ${t.driver_price} دج</div>${['open','full'].includes(t.status)?`<button class="btn sm" data-a="departed" data-id="${t.id}">انطلقت</button><button class="btn ghost sm" data-a="cancelled" data-id="${t.id}">إلغاء</button>`:''}${t.status==='departed'?`<button class="btn sm" data-a="completed" data-id="${t.id}">انتهت الرحلة</button>`:''}<button class="btn ghost sm" data-p="${t.id}">الركاب</button>${['open','full','departed'].includes(t.status)?`<button class="btn ghost sm" data-x="${t.id}">تحويل لسائق آخر</button>`:''}<div id="pp${t.id}"></div></div>`).join('')||'<p class="sub">لا توجد رحلات بعد.</p>'}<div class="card"><b>استلام رحلة من سائق آخر</b><input id="tk" dir="ltr" placeholder="رمز التحويل"><button class="btn sm" id="tka">استلام</button></div><details class="card"><summary>نشر رحلة بنفسي (اختياري)</summary><label>من</label><input id="f" list="w" value="الجزائر"><label>إلى</label><input id="t" list="w"><label>محطات الطريق (مفصولة بفاصلة)</label><input id="st"><label>نقطة التجمع</label><input id="mp"><div class="row"><div style="flex:1"><label>التاريخ</label><input id="d" type="date" value="${tomorrow()}"></div><div style="flex:1"><label>الساعة</label><input id="h" type="time" value="08:00"></div></div><div class="row"><div style="flex:1"><label>المقاعد</label><input id="n" type="number" min="1" max="8" value="${DRV?DRV.seats:4}"></div><div style="flex:1"><label>سعر المقعد لك (دج)</label><input id="pr" type="number"></div></div><div class="err" id="e"></div><button class="btn" id="go">نشر الرحلة</button></details>`);
+  $('#av').onclick=e=>busy(e.target,async()=>{const {error}=await sb.rpc('set_available',{p_on:!av});if(error)return err(error);await load();vTrips()});
+  document.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{const g=reqs[b.dataset.g];
+    $('#acc').innerHTML=`<div class="card"><b>قبول: ${esc(g.from)} ← ${esc(g.to)} (${esc(g.date)})</b><p class="note">بعد القبول تصير الرحلة رسمية ويُشعَر الركاب ليدفعوا ويثبّتوا مقاعدهم، وتظهر لمن يبحث عن وجهة قريبة.</p><div class="row"><div style="flex:1"><label>ساعة الانطلاق</label><input id="at" type="time" value="08:00"></div><div style="flex:1"><label>سعر المقعد لك (دج)</label><input id="ap" type="number" placeholder="1500"></div></div><label>نقطة التجمع</label><input id="am"><label>محطات الطريق (اختياري، مفصولة بفاصلة)</label><input id="as"><div class="err" id="ae"></div><button class="btn" id="ok">تأكيد وجعل الرحلة رسمية</button></div>`;
+    $('#acc').scrollIntoView({behavior:'smooth'});
+    $('#ok').onclick=e=>busy(e.target,async()=>{const pr=+$('#ap').value,tm=$('#at').value;if(!tm||!(pr>=100))return $('#ae').textContent='أدخل الساعة وسعراً صحيحاً.';
+      const stops=$('#as').value.split(/[,،]/).map(s=>s.trim()).filter(Boolean);
+      const x=await sb.rpc('accept_requests',{p_from:g.from,p_to:g.to,p_date:g.date,p_time:tm,p_price:pr,p_meeting:$('#am').value.trim()||null,p_stops:stops});if(x.error)return err(x.error);
+      toast('أصبحت الرحلة رسمية. ركاب: '+x.data.people);vTrips()})});
+  $('#go').onclick=e=>busy(e.target,async()=>{const v=k=>$('#'+k).value.trim(),E=$('#e');
+    if(!v('f')||!v('t')||v('f')===v('t'))return E.textContent='حدّد انطلاقاً ووجهة مختلفين.';
+    if(!(+v('pr')>=100))return E.textContent='أدخل سعراً صحيحاً.';
+    const dep=new Date(v('d')+'T'+v('h')+':00+01:00');if(isNaN(dep)||dep<new Date())return E.textContent='اختر موعداً في المستقبل.';
+    const {data:t,error}=await sb.from('trips').insert({driver_id:U.id,from_wilaya:v('f'),to_wilaya:v('t'),meeting_point:v('mp')||null,departs_at:dep.toISOString(),seats_total:+v('n'),driver_price:+v('pr')}).select().single();
+    if(error)return err(error);
+    const stops=v('st').split(/[,،]/).map(s=>s.trim()).filter(Boolean);
+    if(stops.length){const q=await sb.from('trip_stops').insert(stops.map((name,i)=>({trip_id:t.id,seq:i+1,name})));if(q.error)return err(q.error)}
+    toast('تم نشر الرحلة');vTrips()});
+  document.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>busy(b,async()=>{const {error}=await sb.rpc('set_trip_status',{p_trip:b.dataset.id,p_status:b.dataset.a});if(error)return err(error);vTrips()}));
+  document.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>busy(b,async()=>{const {data,error}=await sb.rpc('trip_passengers',{p_trip:b.dataset.p});if(error)return err(error);$('#pp'+b.dataset.p).innerHTML=data.length?data.map(x=>`<div class="note">• ${esc(x.name)} · ${x.seats} مقعد${x.drop_off?' · نزول: '+esc(x.drop_off):''}${x.status==='awaiting_payment'?' · بانتظار الدفع':''}${x.phone?' · <a href="tel:'+esc(x.phone)+'" dir="ltr">📞 '+esc(x.phone)+'</a>':''}${x.rating?' · ⭐ '+x.rating:''}${x.status==='used'&&!x.rated&&x.booking_id?' <select style="width:64px;display:inline-block"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select> <button class="btn sm" data-rp="'+x.booking_id+'">قيّم الراكب</button>':''}</div>`).join(''):'<div class="note">لا ركاب بعد.</div>'}));
+  document.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>busy(b,async()=>{const {data,error}=await sb.rpc('create_transfer',{p_trip:b.dataset.x});if(error)return err(error);$('#pp'+b.dataset.x).innerHTML=`<div class="res ok">رمز التحويل: <b dir="ltr">${esc(data)}</b><br>أعطه للسائق الآخر خلال 30 دقيقة.</div>`}));
+  $('#tka').onclick=e=>busy(e.target,async()=>{const {data,error}=await sb.rpc('accept_transfer',{p_token:$('#tk').value});if(error)return err(error);toast(data.result==='accepted'?'أصبحت الرحلة لك':'بانتظار موافقة الإدارة');vTrips()});loadEarn()}
+
+async function camScan(done){if(!('BarcodeDetector' in window))return toast('الكاميرا غير مدعومة في هذا المتصفح. أدخل الرمز يدوياً.');
+  let st;try{st=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})}catch(e){return toast('لم يُسمح بالكاميرا.')}
+  const v=document.createElement('video');v.srcObject=st;v.setAttribute('playsinline','');v.style.cssText='width:100%;border-radius:12px;margin-top:8px';$('#cam').appendChild(v);await v.play();
+  const det=new BarcodeDetector({formats:['qr_code']});let on=true;const stop=()=>{on=false;st.getTracks().forEach(t=>t.stop());v.remove()};
+  const loop=async()=>{if(!on)return;try{const r=await det.detect(v);if(r.length){stop();done(r[0].rawValue);return}}catch(e){}setTimeout(loop,300)};loop()}
+function vScan(){V('<h2>مسح التذاكر</h2><p class="sub">امسح رمز QR بالكاميرا أو أدخل رمز التذكرة (TB-…).</p><div class="card"><input id="c" dir="ltr" placeholder="TB-XXXXXXXXXX"><button class="btn" id="go">تحقق</button><button class="btn ghost" id="cm">📷 مسح بالكاميرا</button><div id="cam"></div><div id="r"></div></div>');$('#cm').onclick=()=>camScan(c=>{$('#c').value=c;$('#go').click()});
+  $('#go').onclick=e=>busy(e.target,async()=>{const {data,error}=await sb.rpc('scan_ticket',{p_code:$('#c').value});if(error)return err(error);
+    const ok=data.result==='valid',R=$('#r');
+    R.innerHTML=data.result==='invalid'?'<div class="res bad">✗ تذكرة غير صالحة</div>':`<div class="res ${ok?'ok':'bad'}">${ok?'✓ تذكرة صالحة':'✗ استُعملت من قبل ('+fmt(data.used_at)+')'}<br>الراكب: ${esc(data.passenger)}<br>${esc(data.route)} · نزول: ${esc(data.drop_off)}<br>${fmt(data.departs)} · ${data.seats} مقعد</div>`})}
+
+/* ---------- المدير ---------- */
+async function vDrivers(){const a=await sb.from('drivers').select('*,profiles(full_name,phone)').order('created_at',{ascending:false}),b=await sb.from('driver_payout_accounts').select('*');
+  if(a.error)return err(a.error);const ccp={};(b.data||[]).forEach(x=>ccp[x.driver_id]=x.ccp_number);
+  const SN={pending:'قيد المراجعة',approved:'معتمد',rejected:'مرفوض',suspended:'موقوف'};
+  V('<h2>طلبات السائقين</h2>'+(a.data.length?a.data.map((d,i)=>`<div class="card"><div class="row"><b>${esc(d.profiles&&d.profiles.full_name)}</b><span class="tag ${d.status==='approved'?'ok':d.status==='rejected'?'bad':''}">${SN[d.status]}</span></div><div class="note">هاتف: ${esc(d.profiles&&d.profiles.phone)} · هوية: ${esc(d.id_number)} · رخصة: ${esc(d.license_number)}<br>${esc(d.car_model)} ${esc(d.car_color||'')} · ${esc(d.plate)} · ${d.seats} مقاعد<br>CCP (للمدير فقط): <b dir="ltr">${esc(ccp[d.id]||'—')}</b></div><div id="dc${i}"></div><button class="btn ghost sm" data-d="${i}">عرض الوثائق</button>${d.status==='pending'?`<button class="btn sm" data-ok="1" data-id="${d.id}">قبول</button><button class="btn ghost sm" data-ok="0" data-id="${d.id}">رفض</button>`:''}</div>`).join(''):'<p class="sub">لا توجد طلبات بعد.</p>'));
+  document.querySelectorAll('[data-ok]').forEach(b=>b.onclick=()=>busy(b,async()=>{const ok=b.dataset.ok==='1';const why=ok?null:(prompt('سبب الرفض؟','وثائق غير كاملة')||'وثائق غير كاملة');
+    const {error}=await sb.rpc('admin_review_driver',{p_driver:b.dataset.id,p_approve:ok,p_reason:why});if(error)return err(error);vDrivers()}));
+  document.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>busy(b,async()=>{const d=a.data[b.dataset.d],docs=d.documents||{},out=[],N={id:'الهوية',license:'الرخصة',car:'بطاقة المركبة'};for(const k in docs){const r=await sb.storage.from('driver-docs').createSignedUrl(docs[k],600);if(r.data)out.push(`<a href="${r.data.signedUrl}" target="_blank" rel="noopener">${N[k]||k}</a>`)}$('#dc'+b.dataset.d).innerHTML=out.length?'<div class="note">'+out.join(' · ')+'</div>':'<div class="note">لا وثائق مرفوعة.</div>'}));adminExtras()}
+async function vStats(){const a=await sb.rpc('admin_daily',{p_days:30}),s=await sb.from('settings').select('*');if(a.error)return err(a.error);
+  const sum=k=>a.data.reduce((x,r)=>x+Number(r[k]),0),fee=(s.data.find(x=>x.key==='commission_per_seat')||{}).value;
+  V(`<h2>الإحصائيات (30 يوماً)</h2><div class="card"><div class="row"><span>الحجوزات</span><b>${sum('n_bookings')}</b></div><div class="row"><span>المقاعد</span><b>${sum('n_seats')}</b></div><div class="row"><span>أرباح التطبيق</span><b class="price">${sum('commission')} دج</b></div><div class="row"><span>مستحقات السائقين</span><b>${sum('driver_due')} دج</b></div></div>${a.data.map(r=>`<div class="card"><div class="row"><b>${r.stat_day}</b><span>${r.n_bookings} حجز · ${r.commission} دج</span></div></div>`).join('')}<h3>الإعدادات</h3><div class="card"><label>عمولة المقعد (دج)</label><input id="f" type="number" min="0" value="${fee}"><p class="note">تنطبق على الحجوزات الجديدة فقط.</p><button class="btn" id="sv">حفظ</button></div>`);
+  $('#sv').onclick=e=>busy(e.target,async()=>{const {error}=await sb.rpc('admin_set_setting',{p_key:'commission_per_seat',p_value:+$('#f').value});if(error)return err(error);toast('تم الحفظ')})}
+
+const CASEFORM='<h3>شكوى أو اقتراح</h3><div class="card"><select id="cc"><optgroup label="شكوى"><option data-k="complaint">عدم احترام موعد الرحلة</option><option data-k="complaint">سوء المعاملة</option><option data-k="complaint">مشكلة في الحجز أو الدفع</option><option data-k="complaint">مشكلة في المركبة</option><option data-k="complaint">عدم تنفيذ الرحلة</option></optgroup><optgroup label="اقتراح"><option data-k="suggestion">إضافة منطقة أو بلدية</option><option data-k="suggestion">إضافة خط جديد</option><option data-k="suggestion">وسيلة دفع جديدة</option><option data-k="suggestion">تحسين ميزة موجودة</option><option data-k="suggestion">مشكلة تقنية</option></optgroup></select><input id="cb" placeholder="اشرح بإيجاز"><button class="btn ghost" id="cs">إرسال</button></div>';
+async function vCases(){const {data,error}=await sb.from('cases').select('*,profiles(full_name)').order('created_at',{ascending:false}).limit(40);if(error)return err(error);
+  const tr=await sb.from('trip_transfers').select('*,trips(from_wilaya,to_wilaya,departs_at)').eq('status','awaiting_admin'),T=tr.data||[];
+  const SN={new:'جديدة',in_review:'قيد المراجعة',resolved:'تمت المعالجة'};
+  V('<h2>الشكاوى والاقتراحات</h2><div class="card"><b>📢 إعلان لكل المستخدمين</b><input id="bt" placeholder="العنوان"><input id="bb" placeholder="النص"><button class="btn sm" id="bsend">إرسال</button></div>'+(T.length?'<h3>تحويلات رحلات بعد الانطلاق تنتظر موافقتك</h3>'+T.map((x,i)=>`<div class="card"><b>${esc(x.trips.from_wilaya)} ← ${esc(x.trips.to_wilaya)}</b><div class="note">${fmt(x.trips.departs_at)} · طلب سائق تسليم الرحلة لسائق آخر بعد انطلاقها.</div><button class="btn sm" data-tk="1" data-ti="${i}">موافقة</button><button class="btn ghost sm" data-tk="0" data-ti="${i}">رفض</button></div>`).join('')+'<h3>الشكاوى والاقتراحات</h3>':'')+(data.length?data.map((c,i)=>`<div class="card"><div class="row"><b>${c.kind==='complaint'?'شكوى':'اقتراح'}: ${esc(c.category)}</b><span class="tag ${c.status==='resolved'?'ok':c.status==='new'?'bad':''}">${SN[c.status]}</span></div><div class="note">${esc(c.profiles&&c.profiles.full_name)} · ${fmt(c.created_at)}<br>${esc(c.body||'بدون تفاصيل')}${c.admin_reply?'<br>ردّك: '+esc(c.admin_reply):''}</div>${c.status!=='resolved'?`<button class="btn sm" data-i="${i}" data-s="resolved">رد وإغلاق</button><button class="btn ghost sm" data-i="${i}" data-s="in_review">قيد المراجعة</button>`:''}</div>`).join(''):'<p class="sub">لا توجد شكاوى أو اقتراحات.</p>'));
+  document.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>busy(b,async()=>{const c=data[b.dataset.i],rp=prompt('نص الرد للمستخدم:','تمت المعالجة.');if(rp===null)return;const {error}=await sb.rpc('admin_reply_case',{p_id:c.id,p_status:b.dataset.s,p_reply:rp});if(error)return err(error);vCases()}));
+  document.querySelectorAll('[data-tk]').forEach(b=>b.onclick=()=>busy(b,async()=>{const ok=b.dataset.tk==='1',why=prompt('سبب القرار (يُسجَّل في السجل):','')||'';const {error}=await sb.rpc('admin_decide_transfer',{p_id:T[b.dataset.ti].id,p_approve:ok,p_reason:why});if(error)return err(error);toast(ok?'تمت الموافقة':'تم الرفض');vCases()}));
+  $('#bsend').onclick=e=>busy(e.target,async()=>{const t=$('#bt').value.trim();if(!t)return toast('اكتب العنوان.');if(!confirm('إرسال الإعلان لكل المستخدمين؟'))return;const {data,error}=await sb.rpc('admin_broadcast',{p_title:t,p_body:$('#bb').value.trim()||null});if(error)return err(error);toast('أُرسل إلى '+data+' مستخدم')})}
+async function vDues(){const {data,error}=await sb.rpc('admin_driver_dues');if(error)return err(error);
+  V('<h2>مستحقات السائقين</h2><p class="sub">رحلات انتهت ومرّت مدة التعليق وبلا شكوى مفتوحة. تحويل المال يتم خارج التطبيق، ثم تسجّله هنا.</p>'+(data.length?data.map((d,i)=>`<div class="card"><div class="row"><b>${esc(d.driver_name)}</b><b class="price">${d.amount} دج</b></div><div class="note">${d.n_bookings} حجز · CCP: <b dir="ltr">${esc(d.ccp||'—')}</b></div><button class="btn sm" data-i="${i}">سجّلت التحويل</button></div>`).join(''):'<p class="sub">لا توجد مستحقات جاهزة.</p>'));
+  document.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>busy(b,async()=>{if(!confirm('هل حوّلت المبلغ فعلاً؟'))return;const {error}=await sb.rpc('admin_pay_driver',{p_driver:data[b.dataset.i].due_driver,p_note:null});if(error)return err(error);toast('تم التسجيل');vDues()}))}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-call]');if(!b)return;
+  busy(b,async()=>{const {data,error}=await sb.rpc('trip_driver_contact',{p_trip:b.dataset.call});if(error)return err(error);if(!data||!data.phone)return toast('رقم السائق غير متاح.');
+    const c=b.closest('.card'),o=c.querySelector('.dc');if(o)o.remove();
+    c.insertAdjacentHTML('beforeend',`<div class="dc res ok">السائق: ${esc(data.name)} · <a href="tel:${esc(data.phone)}" dir="ltr">📞 ${esc(data.phone)}</a></div>`)})});
+
+const SOS='<div class="card"><b>🆘 طوارئ</b><div class="note">اتصال سريع (تحقق من الأرقام الرسمية في منطقتك):</div><a class="btn sm" href="tel:17">الشرطة 17</a><a class="btn sm" href="tel:1055">الدرك 1055</a><a class="btn sm" href="tel:14">الحماية المدنية 14</a><button class="btn ghost sm" id="sloc">📍 أرسل موقعي</button></div>';
+const HELP='<h3>المساعدة والشروط</h3><details class="card"><summary>كيف يعمل الحجز؟</summary><p class="note">ابحث عن رحلة، اختر محطة النزول وعدد المقاعد، ثم ادفع. لا يُثبَّت المقعد إلا بعد نجاح الدفع، والسعر ثابت لجميع المحطات.</p></details><details class="card"><summary>الإلغاء والاسترجاع</summary><p class="note">لا يمكن للراكب إلغاء الحجز بعد الدفع. وإذا ألغى السائق الرحلة أو لم ينفذها يُسترجع المبلغ كاملاً.</p></details><details class="card"><summary>الخصوصية</summary><p class="note">لا يظهر رقم هاتفك للسائق إلا بعد حجزك مقعداً معه، ولا يرى بقية السائقين إلا اسمك الأول. رقم CCP والوثائق يراها المدير فقط.</p></details><details class="card"><summary>الشروط (نسخة تجريبية)</summary><p class="note">هذا نص مؤقت للتجربة، وسيُستبدل بالشروط وسياسة الخصوصية النهائية قبل الإطلاق.</p></details>';
+function vReceipt(b){V(`<h2>إيصال الحجز</h2><div class="card"><div class="row"><span>رقم التذكرة</span><b dir="ltr">${esc(b.ticket_code)}</b></div><div class="row"><span>المسار</span><b>${esc(b.trips.from_wilaya)} ← ${esc(b.trips.to_wilaya)}</b></div><div class="row"><span>الموعد</span><b>${fmt(b.trips.departs_at)}</b></div><div class="row"><span>النزول في</span><b>${esc(b.drop_off)}</b></div><div class="row"><span>المقاعد</span><b>${b.seats}</b></div><div class="row"><span>المبلغ</span><b class="price">${b.total_price} دج</b></div><p class="note">وضع تجريبي: لا مبالغ حقيقية.</p></div><button class="btn ghost" id="bk">رجوع</button>`);$('#bk').onclick=vBook}
+async function loadEarn(){const r=await sb.rpc('driver_earnings'),e=$('#ern');if(!e)return;const d=r.data||{};
+  e.innerHTML=`<b>أرباحي</b><div class="row"><span>مستحقات لم تُحوَّل بعد</span><b class="price">${d.pending||0} دج</b></div><div class="row"><span>ما حُوِّل إليك</span><b>${d.total_paid||0} دج</b></div><div class="row"><span>حجوزات / ركاب</span><b>${d.bookings||0} / ${d.passengers||0}</b></div>`}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-share],#sloc');if(!b)return;
+  busy(b,async()=>{let text;
+    if(b.id==='sloc'){text=await new Promise((ok,no)=>navigator.geolocation?navigator.geolocation.getCurrentPosition(p=>ok('أحتاج مساعدة. موقعي: https://maps.google.com/?q='+p.coords.latitude+','+p.coords.longitude),()=>no(new Error('تعذّر تحديد الموقع. تحقق من إذن الموقع.'))):no(new Error('الموقع غير مدعوم في هذا المتصفح')))}
+    else{const c=await sb.rpc('trip_driver_contact',{p_trip:b.dataset.share});if(c.error)return err(c.error);const d=c.data;if(!d)return toast('غير متاح.');
+      text='رحلتي مع taxibook dz\nالرحلة: '+b.dataset.info+'\nالسائق: '+d.name+'\nالسيارة: '+d.car+' · لوحة '+d.plate+'\nهاتف السائق: '+d.phone}
+    if(navigator.share){try{await navigator.share({text})}catch(x){}return}
+    window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank')})});
+
+function EXTRA(){
+  if(P.role==='driver'&&DRV){const w=d=>d&&(new Date(d)-Date.now())/864e5<30;
+    return `<h3>وثائقي</h3><div class="card"><label>تاريخ انتهاء الرخصة</label><input id="dxl" type="date" value="${DRV.license_expiry||''}"><label>تاريخ انتهاء التأمين</label><input id="dxi" type="date" value="${DRV.insurance_expiry||''}">${w(DRV.license_expiry)||w(DRV.insurance_expiry)?'<div class="res bad">إحدى وثائقك تنتهي قريباً أو انتهت، جدّدها.</div>':''}<button class="btn" id="dxs">حفظ</button></div>`}
+  return P.role==='admin'?'':'<div class="card" id="myrt"></div>'}
+async function acctExtras(){
+  if($('#dxs'))$('#dxs').onclick=e=>busy(e.target,async()=>{const {error}=await sb.rpc('set_my_doc_expiry',{p_license:$('#dxl').value||null,p_insurance:$('#dxi').value||null});if(error)return err(error);toast('تم الحفظ');await load();vAcct()});
+  const el=$('#myrt');if(el){const r=await sb.from('passenger_reviews').select('rating').eq('passenger_id',U.id),L=r.data||[];
+    el.innerHTML=L.length?`<b>تقييمك كراكب</b><div class="row"><span>${L.length} تقييم</span><b class="price">⭐ ${(L.reduce((a,x)=>a+x.rating,0)/L.length).toFixed(1)}</b></div>`:'<b>تقييمك كراكب</b><div class="note">لا تقييمات بعد.</div>'}}
+async function adminExtras(){
+  const ex=await sb.rpc('admin_expiring_docs',{p_days:30}),us=await sb.from('profiles').select('id,full_name,phone,role,is_banned').order('created_at',{ascending:false}).limit(100),E=ex.data||[],L=us.data||[];
+  $('#v').insertAdjacentHTML('beforeend',`<h3>وثائق تنتهي خلال 30 يوماً</h3>${E.length?E.map(x=>`<div class="card"><div class="row"><b>${esc(x.name)}</b><span class="tag bad">${esc(x.status)}</span></div><div class="note">رخصة: ${esc(x.license_expiry||'—')} · تأمين: ${esc(x.insurance_expiry||'—')}</div></div>`).join('')+'<button class="btn sm" id="rem">تذكير الجميع</button>':'<p class="sub">لا وثائق قريبة الانتهاء.</p>'}<h3>المستخدمون</h3><input id="us" placeholder="ابحث بالاسم أو الهاتف"><div id="ul"></div>`);
+  const draw=()=>{const q=$('#us').value.trim(),R={passenger:'راكب',driver:'سائق',admin:'مدير'};
+    $('#ul').innerHTML=L.filter(u=>!q||(u.full_name||'').includes(q)||(u.phone||'').includes(q)).slice(0,30).map(u=>`<div class="card"><div class="row"><b>${esc(u.full_name)}</b><span class="tag ${u.is_banned?'bad':''}">${u.is_banned?'موقوف':R[u.role]}</span></div><div class="note" dir="ltr">${esc(u.phone||'')}</div>${u.role!=='admin'?`<button class="btn ${u.is_banned?'':'ghost'} sm" data-ban="${u.id}">${u.is_banned?'رفع الإيقاف':'إيقاف الحساب'}</button>`:''}</div>`).join('')};
+  draw();$('#us').oninput=draw;
+  $('#ul').addEventListener('click',e=>{const b=e.target.closest('[data-ban]');if(!b)return;busy(b,async()=>{const u=L.find(x=>x.id===b.dataset.ban),to=!u.is_banned;
+    const why=to?(prompt('سبب الإيقاف؟','مخالفة الشروط')||null):null;if(to&&!confirm('إيقاف حساب '+u.full_name+'؟'))return;
+    const {error}=await sb.rpc('admin_set_ban',{p_user:u.id,p_banned:to,p_reason:why});if(error)return err(error);u.is_banned=to;draw();toast(to?'تم الإيقاف':'رُفع الإيقاف')})});
+  if($('#rem'))$('#rem').onclick=e=>busy(e.target,async()=>{const {data,error}=await sb.rpc('admin_remind_expiring',{p_days:30});if(error)return err(error);toast('أُرسل تذكير إلى '+data+' سائق')})}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-rp]');if(!b)return;
+  busy(b,async()=>{const sel=b.previousElementSibling;const {error}=await sb.rpc('rate_passenger',{p_booking:b.dataset.rp,p_rating:+sel.value,p_note:null});if(error)return err(error);toast('تم تقييم الراكب');const t=b.closest('.card').querySelector('[data-p]');if(t)t.click()})});
+
+sb.auth.onAuthStateChange((ev)=>{if(ev==='SIGNED_OUT')boot()});
+boot();
+</script>
+</body>
+</html>
